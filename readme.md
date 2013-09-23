@@ -1,6 +1,6 @@
 Validation
 ==========
-Provides a base class to implement validation as a service. Also adds a little sugar to Laravel's validator.
+Provides a base class to implement validation as a service. Also adds a little sugar to Laravel's validator. ***Uses PHP 5.4 Traits***.
 
 Dynamics
 ----------
