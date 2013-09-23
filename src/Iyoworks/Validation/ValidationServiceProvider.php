@@ -4,7 +4,7 @@ use Illuminate\Support\ServiceProvider;
 
 class ValidationServiceProvider extends ServiceProvider {
 
-	public function boot()
+	public function register()
 	{	
 		BaseValidator::$factory = $this->app['validator'];
 		
@@ -12,13 +12,5 @@ class ValidationServiceProvider extends ServiceProvider {
 		{
 			return new Validator($translator, $data, $rules, $messages);
 		});
-	}
-
-	/**
-	 * @return void
-	 */
-	public function register()
-	{	
-		
 	}
 }
