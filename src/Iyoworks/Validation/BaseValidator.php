@@ -139,16 +139,14 @@ abstract class BaseValidator
 			$this->{'preValidateOn'.studly_case($this->mode)}();
 		} 
 		
-		// if($this->pass())
-		{
-			$this->runner->setRules($this->rules);
-			$this->runner->setData($this->data);
-			$this->runner->setCustomMessages($this->messages);
+		$this->runner->setRules($this->rules);
+		$this->runner->setData($this->data);
+		$this->runner->setCustomMessages($this->messages);
 
 			//determine if any errors occured
-			if(!$this->runner->passes())
-				$this->addErrBag($this->runner->messages());
-		}
+		if(!$this->runner->passes())
+			$this->addErrBag($this->runner->messages());
+
 		return $this->pass();
 	}
 

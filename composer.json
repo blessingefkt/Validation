@@ -9,7 +9,8 @@
   ],
   "require": {
     "illuminate/support": "4.0.*",
-    "illuminate/validation": "4.0.*"
+    "illuminate/validation": "4.0.*",
+    "iyoworks/support": "dev",
   },
   "require-dev": {
     "mockery/mockery": "*",
