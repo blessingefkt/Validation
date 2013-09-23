@@ -31,7 +31,7 @@ class Validator extends LValidator
 	 */
 	protected function validate($attribute, $rule)
 	{
-		if(starts_with('dynamic:')){
+		if(starts_with($rule, 'dynamic:')){
 			list($rule, $parameters) = $this->parseRule($rule);
 			$rule = substr($rule, 7);
 			$value = $this->getValue($attribute);
