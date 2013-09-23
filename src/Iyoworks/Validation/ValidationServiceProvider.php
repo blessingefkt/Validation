@@ -2,7 +2,7 @@
 
 use Illuminate\Support\ServiceProvider;
 
-class IyoworksServiceProvider extends ServiceProvider {
+class ValidationServiceProvider extends ServiceProvider {
 
 	public function boot()
 	{	
