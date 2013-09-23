@@ -65,7 +65,7 @@ class FieldValidator extends BaseValidator{
 	protected function preValidateOnDelete() {}
 }
 ```
-Next instanitate your validator
+Next instantiate your validator
 ```
 $validator = new FieldValidator;
 
