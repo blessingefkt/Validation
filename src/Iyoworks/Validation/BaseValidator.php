@@ -129,17 +129,16 @@ abstract class BaseValidator
 		 //only validate necessary attributes
 		$this->rules = array_intersect_key($this->rules, $this->data);
 		// construct the runner	
-		$this->runner = static::$factory->make([],[]);
+		$this->runner = static::$factory->make($this->rules,[]);
 
 		$this->preValidate();
 
 		if($this->mode)
 		{
-			$this->rules = array_merge($this->rules,  $this->{$this->mode.'Rules'});
+			$this->runner->addRules($this->{$this->mode.'Rules'});
 			$this->{'preValidateOn'.studly_case($this->mode)}();
 		} 
 		
-		$this->runner->setRules($this->rules);
 		$this->runner->setData($this->data);
 		$this->runner->setCustomMessages($this->messages);
 

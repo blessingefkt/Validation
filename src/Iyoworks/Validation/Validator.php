@@ -32,12 +32,13 @@ class Validator extends LValidator
 	protected function validate($attribute, $rule)
 	{
 		if(starts_with($rule, 'dynamic:')){
-			list($rule, $parameters) = $this->parseRule($rule);
-			$rule = substr($rule, 7);
-			$value = $this->getValue($attribute);
+			$rule = str_replace('dynamic:', '',$rule);
+			list($_rule, $parameters) = $this->parseRule($rule);
 			$dynamic = $this->dynamics[$attribute][$rule];
+			$value = $this->getValue($attribute);
 			if(!$dynamic($attribute, $value, $parameters, $this))
-				return $this->addFailure($attribute, $rule, $parameters);
+				$this->addFailure($attribute, $rule, $parameters);
+			return;
 		}
 		
 		return parent::validate($attribute, $rule);
