@@ -1,24 +1,11 @@
 {
   "name": "iyoworks/validation",
   "description": "Provides a base class to implement validation as a service. Also adds a little sugar to Laravel's validator",
+  "keywords" : [ "laravel", "laravel 4", "validation"],
   "authors": [
     {
       "name": "Blessing Osakue",
       "email": "iyoworks@gmail.com"
-    }
-  ],
-  "repositories": [
-    {
-      "type": "package",
-      "package": {
-        "name": "iyoworks/support",
-        "version": "master",
-        "source": {
-          "url": "https://github.com/iyoworks/Support.git",
-          "type": "git",
-          "reference": "master"
-        }
-      }
     }
   ],
   "require": {
