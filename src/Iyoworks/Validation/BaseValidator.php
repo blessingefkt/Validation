@@ -64,6 +64,12 @@ abstract class BaseValidator
 	const 	MODE_DELETE = 'delete';
 
 	/**
+	 * if enabled all rules will be used, even if corresponding data attribute is absent
+	 * @var boolean
+	 */
+	protected $strict = false;
+
+	/**
 	 * Set mode to insert
 	 * @return \Iyoworks\Repository\Validator
 	 */
@@ -126,19 +132,21 @@ abstract class BaseValidator
 	{
 		if(!empty($data)) $this->setData($data);
 		
-		 //only validate necessary attributes
-		$this->rules = array_intersect_key($this->rules, $this->data);
 		// construct the runner	
-		$this->runner = static::$factory->make($this->rules,[]);
+		$this->runner = static::$factory->make([],[]);
 
 		$this->preValidate();
 
 		if($this->mode)
 		{
-			$this->runner->addRules($this->{$this->mode.'Rules'});
+			$this->rules = array_merge($this->rules, $this->{$this->mode.'Rules'});
 			$this->{'preValidateOn'.studly_case($this->mode)}();
 		} 
-		
+
+		 //only validate necessary attributes
+		if(!$this->strict) $this->rules = array_intersect_key($this->rules, $this->data);
+
+		$this->runner->addRules($this->rules);
 		$this->runner->setData($this->data);
 		$this->runner->setCustomMessages($this->messages);
 
@@ -195,6 +203,26 @@ abstract class BaseValidator
 				return $_data->toArray();
 		}
 		return $_data;
+	}
+
+	/**
+	 * Set strict mode
+	 * @return void
+	 */
+	public function strict()
+	{
+		$this->strict = true;
+		return $this;
+	}
+
+	/**
+	 * UnSet strict mode
+	 * @return void
+	 */
+	public function relaxed()
+	{
+		$this->strict = false;
+		return $this;
 	}
 
 	/**
