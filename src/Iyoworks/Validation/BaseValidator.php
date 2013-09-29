@@ -2,7 +2,6 @@
 
 abstract class BaseValidator
 {
-	use \Iyoworks\Support\Traits\ErrorHandlerTrait;
 	/**
 	 * @var \Illuminate\Validation\Factory
 	 */
@@ -12,6 +11,11 @@ abstract class BaseValidator
 	 * @var \Iyoworks\Repository\Validation\Validator
 	 */
 	protected $runner;
+
+	/**
+	 * @var \Illuminate\Support\MessageBag
+	 */
+	protected $errors;
 
 	/**
 	* @var array
@@ -70,36 +74,6 @@ abstract class BaseValidator
 	protected $strict = false;
 
 	/**
-	 * Set mode to insert
-	 * @return \Iyoworks\Repository\Validator
-	 */
-	public function insert()
-	{
-		$this->mode = self::MODE_INSERT;
-		return $this;
-	}
-
-	/**
-	 * Set mode to update
-	 * @return \Iyoworks\Repository\Validator
-	 */
-	public function update()
-	{
-		$this->mode = self::MODE_UPDATE;
-		return $this;
-	}
-
-	/**
-	 * Set mode to delete
-	 * @return \Iyoworks\Repository\Validator
-	 */
-	public function delete()
-	{
-		$this->mode = self::MODE_DELETE;
-		return $this;
-	}
-
-	/**
 	 * Called before validation
 	 * @return void
 	 */
@@ -150,11 +124,41 @@ abstract class BaseValidator
 		$this->runner->setData($this->data);
 		$this->runner->setCustomMessages($this->messages);
 
-			//determine if any errors occured
+		//determine if any errors occured
 		if(!$this->runner->passes())
-			$this->addErrBag($this->runner->messages());
+			$this->errors = $this->runner->messages();
 
 		return $this->pass();
+	}
+
+	/**
+	 * Set mode to insert
+	 * @return \Iyoworks\Repository\BaseValidator
+	 */
+	public function insert()
+	{
+		$this->mode = self::MODE_INSERT;
+		return $this;
+	}
+
+	/**
+	 * Set mode to update
+	 * @return \Iyoworks\Repository\BaseValidator
+	 */
+	public function update()
+	{
+		$this->mode = self::MODE_UPDATE;
+		return $this;
+	}
+
+	/**
+	 * Set mode to delete
+	 * @return \Iyoworks\Repository\BaseValidator
+	 */
+	public function delete()
+	{
+		$this->mode = self::MODE_DELETE;
+		return $this;
 	}
 
 	/**
@@ -206,23 +210,23 @@ abstract class BaseValidator
 	}
 
 	/**
-	 * Set strict mode
-	 * @return void
+	 * Get the errors
+	 * @return  \Illuminate\Support\MessageBag|mixed
 	 */
-	public function strict()
+	public function errors()
 	{
-		$this->strict = true;
-		return $this;
+		if (is_null($this->errors))
+			$this->errors = new \Illuminate\Support\MessageBag;
+		return $this->errors;
 	}
 
 	/**
-	 * UnSet strict mode
-	 * @return void
+	 * Get the errors
+	 * @return mixed
 	 */
-	public function relaxed()
+	public function errorMsg()
 	{
-		$this->strict = false;
-		return $this;
+		return implode(' ', $this->errors()->all());
 	}
 
 	/**
@@ -231,7 +235,16 @@ abstract class BaseValidator
 	 */
 	public function pass()
 	{
-		return !$this->hasErrors();
+		return !$this->errors()->any();
+	}
+
+	/**
+	 * Check if errors exist
+	 * @return  bool
+	 */
+	public function fail()
+	{
+		return $this->errors()->any();
 	}
 
 	/**
@@ -247,7 +260,7 @@ abstract class BaseValidator
 	 * Merge data into the existing data set 
 	 * @param  mixed $key     
 	 * @param  mixed $value
-	 * @return \Iyoworks\Repository\Validator
+	 * @return \Iyoworks\Repository\BaseValidator
 	 */
 	public function addData($data, $value = null)
 	{
@@ -261,11 +274,23 @@ abstract class BaseValidator
 	/**
 	 * Overwrite the existing data
 	 * @param mixed $data
-	 * @return \Iyoworks\Repository\Validator
+	 * @return \Iyoworks\Repository\BaseValidator
 	 */
 	public function setData($data)
 	{
 		$this->data = $this->parseData($data);
+		return $this;
+	}
+
+	/**
+	 * Set a value 
+	 * @param  string $key     
+	 * @param  mixed $value
+	 * @return \Iyoworks\Repository\BaseValidator
+	 */
+	public function set($key, $value)
+	{
+		array_set($this->data, $key, $value);
 		return $this;
 	}
 
@@ -275,20 +300,9 @@ abstract class BaseValidator
 	 * @param  mixed $default
 	 * @return mixed
 	 */
-	protected function get($key, $default = null)
+	public function get($key, $default = null)
 	{
 		return array_get($this->data, $key, $default);
-	}
-
-	/**
-	 * Set a value 
-	 * @param  string $key     
-	 * @param  mixed $value
-	 * @return void
-	 */
-	protected function set($key, $value)
-	{
-		array_set($this->data, $key, $value);
 	}
 
 	/**
@@ -319,20 +333,41 @@ abstract class BaseValidator
 	}
 
 	/**
+	 * Get the mode
+	 * @return string
+	 */
+	public function getMode()
+	{
+		return $this->mode;
+	}
+
+	/**
 	* Clear the data container
-	* @return void
+	* @return \Iyoworks\Repository\BaseValidator
 	*/
 	public function resetData()
 	{
 		$this->data = [];
+		return $this;
 	}
 
 	/**
-	 * Get the mode
-	 * @return string
+	 * Set strict mode
+	 * @return \Iyoworks\Repository\BaseValidator
 	 */
-	public function mode()
+	public function strict()
 	{
-		return $this->mode;
+		$this->strict = true;
+		return $this;
+	}
+
+	/**
+	 * UnSet strict mode
+	 * @return \Iyoworks\Repository\BaseValidator
+	 */
+	public function relaxed()
+	{
+		$this->strict = false;
+		return $this;
 	}
 }
