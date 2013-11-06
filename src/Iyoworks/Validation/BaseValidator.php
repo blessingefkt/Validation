@@ -30,21 +30,6 @@ abstract class BaseValidator
 	/**
 	* @var array
 	*/
-	protected $insertRules = [];
-
-	/**
-	* @var array
-	*/
-	protected $updateRules = [];
-
-	/**
-	* @var array
-	*/
-	protected $deleteRules = [];
-
-	/**
-	* @var array
-	*/
 	protected $messages = [];
 
 	/**
@@ -55,17 +40,17 @@ abstract class BaseValidator
 	/**
 	* @var string
 	*/
-	const 	MODE_INSERT = 'insert';
+	const 	MODE_INSERT = 'preValidateOnInsert';
 
 	/**
 	* @var string
 	*/
-	const 	MODE_UPDATE = 'update';
+	const 	MODE_UPDATE = 'preValidateOnUpdate';
 
 	/**
 	* @var string
 	*/
-	const 	MODE_DELETE = 'delete';
+	const 	MODE_DELETE = 'preValidateOnDelete';
 
 	/**
 	 * if enabled all rules will be used, even if corresponding data attribute is absent
@@ -80,19 +65,19 @@ abstract class BaseValidator
 	protected function preValidate() {}
 
 	/**
-	 * Called before validation when mode is insert
+	 * Called when mode is insert and after runner has been created
 	 * @return void
 	 */
 	protected function preValidateOnInsert() {}
 
 	/**
-	 * Called before validation when mode is update
+	 * Called when mode is update and after runner has been created
 	 * @return void
 	 */
 	protected function preValidateOnUpdate() {}
 
 	/**
-	 * Called before validation when mode is delete
+	 * Called when mode is delete and after runner has been created
 	 * @return void
 	 */
 	protected function preValidateOnDelete() {}
@@ -102,63 +87,59 @@ abstract class BaseValidator
 	 * @param  mixed $data
 	 * @return bool  
 	 */
-	public function valid($data = null)
+	public function isValid($data)
 	{
-		if(!empty($data)) $this->setData($data);
+		$this->setData($data);
 		
-		// construct the runner	
-		$this->runner = static::$factory->make([],[]);
-
 		$this->preValidate();
-
-		if($this->mode)
-		{
-			$this->rules = array_merge($this->rules, $this->{$this->mode.'Rules'});
-			$this->{'preValidateOn'.studly_case($this->mode)}();
-		} 
 
 		 //only validate necessary attributes
 		if(!$this->strict) $this->rules = array_intersect_key($this->rules, $this->data);
 
-		$this->runner->addRules($this->rules);
-		$this->runner->setData($this->data);
-		$this->runner->setCustomMessages($this->messages);
+		// construct the runner	
+		$this->runner = static::$factory->make($this->rules, $this->data, $this->messages);
+
+		//if a mode has been set, call the corresponding function
+		if($this->mode) $this->{$this->mode}();
 
 		//determine if any errors occured
 		if(!$this->runner->passes())
+		{
 			$this->errors = $this->runner->messages();
-
-		return $this->pass();
+			return false;
+		}
+		
+		return true;
 	}
 
 	/**
 	 * Set mode to insert
 	 * @return \Iyoworks\Repository\BaseValidator
 	 */
-	public function insert()
+	public function validForInsert($data)
 	{
-		$this->mode = self::MODE_INSERT;
-		return $this;
+		$this->mode = static::MODE_INSERT;
+		return $this->isValid($data);
 	}
 
 	/**
 	 * Set mode to update
 	 * @return \Iyoworks\Repository\BaseValidator
 	 */
-	public function update()
+	public function validForUpdate($data)
 	{
-		$this->mode = self::MODE_UPDATE;
-		return $this;
+		$this->mode = static::MODE_UPDATE;
+		return $this->isValid($data);
 	}
 
 	/**
 	 * Set mode to delete
 	 * @return \Iyoworks\Repository\BaseValidator
 	 */
-	public function delete()
+	public function validForDelete($data)
 	{
-		$this->mode = self::MODE_DELETE;
-		return $this;
+		$this->mode = static::MODE_DELETE;
+		return $this->isValid($data);
 	}
 
 	/**
@@ -188,28 +169,6 @@ abstract class BaseValidator
 	}
 
 	/**
-	 * Parse data and convert it to array
-	 * @param  mixed $_data
-	 * @return array
-	 */
-	protected function parseData($_data)
-	{
-		$this->obj = $_data;
-		if(is_array($_data))
-			return $_data;
-		if(is_object($_data))
-		{
-			if($this->mode == self::MODE_UPDATE and method_exists($_data, 'getDirty'))
-				return $_data->getDirty();
-			elseif(method_exists($_data, 'getAttributes'))
-				return $_data->getAttributes();
-			elseif(method_exists($_data, 'toArray'))
-				return $_data->toArray();
-		}
-		return $_data;
-	}
-
-	/**
 	 * Get the errors
 	 * @return  \Illuminate\Support\MessageBag|mixed
 	 */
@@ -227,24 +186,6 @@ abstract class BaseValidator
 	public function errorMsg()
 	{
 		return implode(' ', $this->errors()->all());
-	}
-
-	/**
-	 * Determine if validation passed
-	 * @return bool
-	 */
-	public function pass()
-	{
-		return !$this->errors()->any();
-	}
-
-	/**
-	 * Check if errors exist
-	 * @return  bool
-	 */
-	public function fail()
-	{
-		return $this->errors()->any();
 	}
 
 	/**
@@ -267,7 +208,7 @@ abstract class BaseValidator
 		if($value) 
 			$this->data[$data] = $value;
 		else 
-			$this->data = array_merge_recursive($this->data, $this->parseData($data));
+			$this->data = array_merge_recursive($this->data, (array) $data);
 		return $this;
 	}
 
@@ -276,9 +217,9 @@ abstract class BaseValidator
 	 * @param mixed $data
 	 * @return \Iyoworks\Repository\BaseValidator
 	 */
-	public function setData($data)
+	public function setData(array $data)
 	{
-		$this->data = $this->parseData($data);
+		$this->data = $data;
 		return $this;
 	}
 
@@ -333,15 +274,6 @@ abstract class BaseValidator
 	}
 
 	/**
-	 * Get the mode
-	 * @return string
-	 */
-	public function getMode()
-	{
-		return $this->mode;
-	}
-
-	/**
 	* Clear the data container
 	* @return \Iyoworks\Repository\BaseValidator
 	*/
@@ -369,5 +301,14 @@ abstract class BaseValidator
 	{
 		$this->strict = false;
 		return $this;
+	}
+
+	/**
+	 * Get the mode
+	 * @return string
+	 */
+	public function getMode()
+	{
+		return $this->mode;
 	}
 }
