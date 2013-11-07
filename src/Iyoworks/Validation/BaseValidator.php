@@ -89,18 +89,18 @@ abstract class BaseValidator
 	 */
 	public function isValid($data)
 	{
-		$this->setData($data);
+		$this->data = $data;
 		
-		$this->preValidate();
-
-		 //only validate necessary attributes
-		if(!$this->strict) $this->rules = array_intersect_key($this->rules, $this->data);
-
-		// construct the runner	
-		$this->runner = static::$factory->make($this->rules, $this->data, $this->messages);
-
+		$this->preValidate();	
+		
 		//if a mode has been set, call the corresponding function
 		if($this->mode) $this->{$this->mode}();
+
+		//check if I only validate necessary attributes
+		$_rules = !$this->strict ? array_intersect_key($this->rules, $this->data) : $this->rules;
+
+		// construct the runner	
+		$this->runner = static::$factory->make($this->data, $this->rules, $this->messages);
 
 		//determine if any errors occured
 		if(!$this->runner->passes())
@@ -203,23 +203,12 @@ abstract class BaseValidator
 	 * @param  mixed $value
 	 * @return \Iyoworks\Repository\BaseValidator
 	 */
-	public function addData($data, $value = null)
+	protected function addData($data, $value = null)
 	{
 		if($value) 
 			$this->data[$data] = $value;
 		else 
 			$this->data = array_merge_recursive($this->data, (array) $data);
-		return $this;
-	}
-
-	/**
-	 * Overwrite the existing data
-	 * @param mixed $data
-	 * @return \Iyoworks\Repository\BaseValidator
-	 */
-	public function setData(array $data)
-	{
-		$this->data = $data;
 		return $this;
 	}
 
