@@ -100,7 +100,7 @@ abstract class BaseValidator
 		$_rules = !$this->strict ? array_intersect_key($this->rules, $this->data) : $this->rules;
 
 		// construct the runner	
-		$this->runner = static::$factory->make($this->data, $this->rules, $this->messages);
+		$this->runner = static::$factory->make($this->data, $_rules, $this->messages);
 
 		//determine if any errors occured
 		if(!$this->runner->passes())
