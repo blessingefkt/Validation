@@ -105,11 +105,17 @@ abstract class BaseValidator
 		//determine if any errors occured
 		if(!$this->runner->passes())
 		{
-			$this->errors = $this->runner->messages();
+			$this->handleErrors($this->runner->messages());
 			return false;
 		}
-		
+		$this->handleErrors(null);
 		return true;
+	}
+
+	protected function handleErrors($bag)
+	{
+		if(!$bag) $bag = new \Illuminate\Support\MessageBag;
+		$this->errors = $bag;
 	}
 
 	/**
@@ -147,6 +153,7 @@ abstract class BaseValidator
 	 * 	$this->setUnique('name', 'id') - get the name rule and append $this->data['id'] to it
 	 * 	$this->setUnique('name', 4, true) - get the name rule and append 4 to it
 	 * 	NOTE: rule should have table column already appended to it.
+	 * 	
 	 * @param string  $key       data attribute name
 	 * @param mixed  $value     
 	 * @param boolean $useActual use the actual $value
@@ -174,8 +181,6 @@ abstract class BaseValidator
 	 */
 	public function errors()
 	{
-		if (is_null($this->errors))
-			$this->errors = new \Illuminate\Support\MessageBag;
 		return $this->errors;
 	}
 
