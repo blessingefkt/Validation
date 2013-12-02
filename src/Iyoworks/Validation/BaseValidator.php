@@ -63,6 +63,60 @@ abstract class BaseValidator
     }
 
     /**
+     * Set mode to update
+     * @param array $data
+     * @return bool
+     */
+    public function validForUpdate($data)
+    {
+        $this->mode = static::MODE_UPDATE;
+        return $this->isValid($data);
+    }
+
+    /**
+     * Set mode to delete
+     * @param array $data
+     * @return bool
+     */
+    public function validForDelete($data)
+    {
+        $this->mode = static::MODE_DELETE;
+        return $this->isValid($data);
+    }
+
+    /**
+     * Called before validation
+     * @return void
+     */
+    protected function preValidate()
+    {
+    }
+
+    /**
+     * Called when mode is insert and after runner has been created
+     * @return void
+     */
+    protected function preValidateOnInsert()
+    {
+    }
+
+    /**
+     * Called when mode is update and after runner has been created
+     * @return void
+     */
+    protected function preValidateOnUpdate()
+    {
+    }
+
+    /**
+     * Called when mode is delete and after runner has been created
+     * @return void
+     */
+    protected function preValidateOnDelete()
+    {
+    }
+
+    /**
      * Run the validator
      * @param  mixed $data
      * @return bool
@@ -92,44 +146,16 @@ abstract class BaseValidator
     }
 
     /**
-     * Called before validation
-     * @return void
-     */
-    protected function preValidate()
-    {
-    }
-
-    /**
      * @param \Illuminate\Support\MessageBag $bag
      */
     protected function handleErrors($bag)
     {
         if ($bag) {
-            if(!$this->errors)
+            if (!$this->errors)
                 $this->errors = $bag;
             else
                 $this->errors->merge($bag->getMessages());
         }
-    }
-
-    /**
-     * Set mode to update
-     * @return \Iyoworks\Repository\BaseValidator
-     */
-    public function validForUpdate($data)
-    {
-        $this->mode = static::MODE_UPDATE;
-        return $this->isValid($data);
-    }
-
-    /**
-     * Set mode to delete
-     * @return \Iyoworks\Repository\BaseValidator
-     */
-    public function validForDelete($data)
-    {
-        $this->mode = static::MODE_DELETE;
-        return $this->isValid($data);
     }
 
     /**
@@ -200,45 +226,6 @@ abstract class BaseValidator
     }
 
     /**
-     * Get the validator instance
-     * @return \Illuminate\Validation\Validator
-     */
-    public function getRunner()
-    {
-        return $this->runner;
-    }
-
-    /**
-     * Set a value
-     * @param  string $key
-     * @param  mixed $value
-     * @return \Iyoworks\Repository\BaseValidator
-     */
-    public function set($key, $value)
-    {
-        array_set($this->data, $key, $value);
-        return $this;
-    }
-
-    /**
-     * Get the messages
-     * @return array
-     */
-    public function getMessages()
-    {
-        return $this->messages;
-    }
-
-    /**
-     * Get the rules
-     * @return array
-     */
-    public function getRules()
-    {
-        return $this->rules;
-    }
-
-    /**
      * Get a the data container
      * @return array
      */
@@ -278,6 +265,45 @@ abstract class BaseValidator
     }
 
     /**
+     * Set a value
+     * @param  string $key
+     * @param  mixed $value
+     * @return \Iyoworks\Repository\BaseValidator
+     */
+    public function set($key, $value)
+    {
+        array_set($this->data, $key, $value);
+        return $this;
+    }
+
+    /**
+     * Get the validator instance
+     * @return \Illuminate\Validation\Validator
+     */
+    public function getRunner()
+    {
+        return $this->runner;
+    }
+
+    /**
+     * Get the messages
+     * @return array
+     */
+    public function getMessages()
+    {
+        return $this->messages;
+    }
+
+    /**
+     * Get the rules
+     * @return array
+     */
+    public function getRules()
+    {
+        return $this->rules;
+    }
+
+    /**
      * Get the mode
      * @return string
      */
@@ -287,32 +313,8 @@ abstract class BaseValidator
     }
 
     /**
-     * Called when mode is insert and after runner has been created
-     * @return void
-     */
-    protected function preValidateOnInsert()
-    {
-    }
-
-    /**
-     * Called when mode is update and after runner has been created
-     * @return void
-     */
-    protected function preValidateOnUpdate()
-    {
-    }
-
-    /**
-     * Called when mode is delete and after runner has been created
-     * @return void
-     */
-    protected function preValidateOnDelete()
-    {
-    }
-
-    /**
      * Merge data into the existing data set
-     * @param  mixed $key
+     * @param  mixed $data
      * @param  mixed $value
      * @return \Iyoworks\Repository\BaseValidator
      */
