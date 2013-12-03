@@ -38,12 +38,10 @@ Next instantiate your validator
 ```
 $validator = new FieldValidator;
 
-//$entity is anything with a getAttributes()/toArray() method.
-//if the mode is update, first the validator looks for a getDirty() method
-//if none of these things exist, it's passed as is.
+$data = ['name' => 'Title', 'order' => 2];
 
 //set the mode and pass your data object
-if($validator->validForInsert($entity)){
+if($validator->validForInsert($data)){
     //your logic
 } else {
 	$this->errors = $this->validator->errors();
