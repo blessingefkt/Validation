@@ -23,7 +23,7 @@ abstract class BaseValidator
      */
     public static $factory;
     /**
-     * @var \Iyoworks\Repository\Validation\Validator
+     * @var \Iyoworks\Validation\Validator
      */
     protected $runner;
     /**
@@ -125,6 +125,8 @@ abstract class BaseValidator
     {
         $this->data = $data;
 
+        $this->runner = static::$factory->make([], []);
+
         $this->preValidate();
 
         //if a mode has been set, call the corresponding function
@@ -133,8 +135,9 @@ abstract class BaseValidator
         //check if I only validate necessary attributes
         $_rules = !$this->strict ? array_intersect_key($this->rules, $this->data) : $this->rules;
 
-        // construct the runner
-        $this->runner = static::$factory->make($this->data, $_rules, $this->messages);
+        $this->runner->setData($this->data);
+        $this->runner->addRules($_rules);
+        $this->runner->setCustomMessages($this->messages);
 
         //determine if any errors occured
         if (!$this->runner->passes()) {
