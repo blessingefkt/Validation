@@ -18,7 +18,14 @@ class FieldValidator extends BaseValidator{
 	];
 		
 	//executed before validation
-	protected function preValidate() { }
+	protected function preValidate() {
+       	if($fieldtype = $this->get('fieldtype'))
+		{
+			$this->runner->addDynamic('fieldtype', 'exists', function($value){
+			  return app('fieldtypes')->exists($value);
+			}, 'Invalid fieldtype given for :attribute attribute');
+		}
+	}
 
 	//executed before validation on insert mode	
 	protected function preValidateOnInsert() {}
