@@ -12,6 +12,9 @@ class ValidationServiceProvider extends ServiceProvider {
 		{
 			return new Validator($translator, $data, $rules, $messages);
 		});
+
+		$loader = \Illuminate\Foundation\AliasLoader::getInstance();
+		$loader->add('BaseValidator', 'Iyoworks\Validation\BaseValidator');
 	}
 
 	public function register()
