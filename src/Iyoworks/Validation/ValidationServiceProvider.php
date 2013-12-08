@@ -14,7 +14,7 @@ class ValidationServiceProvider extends ServiceProvider {
 		});
 
 		$loader = \Illuminate\Foundation\AliasLoader::getInstance();
-		$loader->add('BaseValidator', 'Iyoworks\Validation\BaseValidator');
+		$loader->alias('BaseValidator', 'Iyoworks\Validation\BaseValidator');
 	}
 
 	public function register()
