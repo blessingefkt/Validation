@@ -41,6 +41,18 @@ abstract class BaseValidator
     /**
      * @var array
      */
+    protected $updateRules = [];
+    /**
+     * @var array
+     */
+    protected $insertRules = [];
+    /**
+     * @var array
+     */
+    protected $deleteRules = [];
+    /**
+     * @var array
+     */
     protected $messages = [];
     /**
      * @var boolean
@@ -54,11 +66,13 @@ abstract class BaseValidator
 
     /**
      * Set mode to insert
-     * @return \Iyoworks\Repository\BaseValidator
+     * @param $data
+     * @return bool
      */
     public function validForInsert($data)
     {
         $this->mode = static::MODE_INSERT;
+        $this->rules = array_merge($this->rules, $this->insertRules);
         return $this->isValid($data);
     }
 
@@ -70,6 +84,7 @@ abstract class BaseValidator
     public function validForUpdate($data)
     {
         $this->mode = static::MODE_UPDATE;
+        $this->rules = array_merge($this->rules, $this->updateRules);
         return $this->isValid($data);
     }
 
@@ -81,6 +96,7 @@ abstract class BaseValidator
     public function validForDelete($data)
     {
         $this->mode = static::MODE_DELETE;
+        $this->rules = array_merge($this->rules, $this->deleteRules);
         return $this->isValid($data);
     }
 
@@ -161,32 +177,19 @@ abstract class BaseValidator
         }
     }
 
-    /**
-     * Set the ID or value for a unique rule
-     *    $this->setUnique('name', 'id') - get the name rule and append $this->data['id'] to it
-     *    $this->setUnique('name', 4, true) - get the name rule and append 4 to it
-     *    NOTE: rule should have table column already appended to it.
-     *
-     * @param string $key data attribute name
-     * @param mixed $value
-     * @param boolean $useActual use the actual $value
-     * @param string $rkey rule to apply changes to
-     * @return BaseValidator
-     */
-    public function setUnique($key, $value = null, $useActual = false, $rkey = 'unique')
+    protected function parseRuleReplacements($_rules)
     {
-        $rule = $this->rules[$key];
-        $start = strpos($rule, $rkey);
-        $end = strpos($rule, '|', $start) ? : strlen($rule);
-        $uniqueRuleOrig = $uniqueRule = substr($rule, strpos($rule, $rkey), $end - $start);
-        if (!$useActual and $value)
-            $value = $this->get($key);
-        elseif (!$useActual and !$value)
-            $value = $this->get('id');
-        $uniqueRule = rtrim($uniqueRule, ',') . ',' . $value;
-        $rule = str_replace($uniqueRuleOrig, $uniqueRule, $rule);
-        $this->rules[$key] = $rule;
-        return $this;
+        foreach ($_rules as $key => $rule) {
+            $matches = [];
+            if (preg_match_all("/\[(\w+)\]/", $rule,  $matches, PREG_SET_ORDER))
+            {
+                foreach ($matches as $match) {
+                    $rule = str_replace($match[0], $this->get($match[1]), $rule);
+                }
+            }
+            $_rules[$key] = $rule;
+        }
+        return $_rules;
     }
 
     /**
@@ -239,7 +242,7 @@ abstract class BaseValidator
 
     /**
      * Clear the data container
-     * @return \Iyoworks\Repository\BaseValidator
+     * @return $this
      */
     public function resetData()
     {
@@ -249,7 +252,7 @@ abstract class BaseValidator
 
     /**
      * Set strict mode
-     * @return \Iyoworks\Repository\BaseValidator
+     * @return $this
      */
     public function strict()
     {
@@ -259,7 +262,7 @@ abstract class BaseValidator
 
     /**
      * UnSet strict mode
-     * @return \Iyoworks\Repository\BaseValidator
+     * @return $this
      */
     public function relaxed()
     {
@@ -271,7 +274,7 @@ abstract class BaseValidator
      * Set a value
      * @param  string $key
      * @param  mixed $value
-     * @return \Iyoworks\Repository\BaseValidator
+     * @return $this
      */
     public function set($key, $value)
     {
@@ -319,7 +322,7 @@ abstract class BaseValidator
      * Merge data into the existing data set
      * @param  mixed $data
      * @param  mixed $value
-     * @return \Iyoworks\Repository\BaseValidator
+     * @return $this
      */
     protected function addData($data, $value = null)
     {
