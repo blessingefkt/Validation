@@ -76,8 +76,7 @@ abstract class BaseValidator
     public function validForInsert($data)
     {
         $this->mode = static::MODE_INSERT;
-        $this->rules = array_merge($this->rules, $this->insertRules);
-        return $this->isValid($data);
+        return $this->isValid($data, $this->insertRules);
     }
 
     /**
@@ -88,8 +87,7 @@ abstract class BaseValidator
     public function validForUpdate($data)
     {
         $this->mode = static::MODE_UPDATE;
-        $this->rules = array_merge($this->rules, $this->updateRules);
-        return $this->isValid($data);
+        return $this->isValid($data, $this->updateRules);
     }
 
     /**
@@ -100,8 +98,7 @@ abstract class BaseValidator
     public function validForDelete($data)
     {
         $this->mode = static::MODE_DELETE;
-        $this->rules = array_merge($this->rules, $this->deleteRules);
-        return $this->isValid($data);
+        return $this->isValid($data, $this->deleteRules);
     }
 
     /**
@@ -141,25 +138,26 @@ abstract class BaseValidator
      * @param  mixed $data
      * @return bool
      */
-    public function isValid($data)
+    public function isValid($data, array $rules = [])
     {
         $this->data = $data;
 
-        $this->runner = static::$factory->make([], []);
+        //check if I only validate necessary attributes
+        $_rules = !$this->strict ? array_intersect_key($this->rules, $this->data) : $this->rules;
+        $_rules = $this->parseRuleReplacements($_rules);
+        $this->runner = static::$factory->make($this->data, $_rules, $this->messages);
+
+        // add additional rules to validator
+        $this->runner->addRules($this->parseRuleReplacements($rules));
+
+        // make parsed rules available
+        $this->parsedRules = $this->runner->getRules();
 
         $this->preValidate();
-
         //if a mode has been set, call the corresponding function
         if ($this->mode) $this->{$this->mode}();
 
-        //check if I only validate necessary attributes
-        $_rules = !$this->strict ? array_intersect_key($this->rules, $this->data) : $this->rules;
-        $this->parsedRules = $this->parseRuleReplacements($_rules);
-        $this->runner->setData($this->data);
-        $this->runner->addRules($this->parsedRules);
-        $this->runner->setCustomMessages($this->messages);
-
-        //determine if any errors occured
+        //determine if any errors occurred
         if (!$this->runner->passes()) {
             $this->handleErrors($this->runner->messages());
             return false;
