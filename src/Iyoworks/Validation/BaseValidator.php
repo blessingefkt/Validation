@@ -153,8 +153,8 @@ abstract class BaseValidator
         if ($this->mode) $this->{$this->mode}();
 
         //check if I only validate necessary attributes
-        $this->parsedRules = !$this->strict ? array_intersect_key($this->rules, $this->data) : $this->rules;
-
+        $_rules = !$this->strict ? array_intersect_key($this->rules, $this->data) : $this->rules;
+        $this->parsedRules = $this->parseRuleReplacements($_rules);
         $this->runner->setData($this->data);
         $this->runner->addRules($this->parsedRules);
         $this->runner->setCustomMessages($this->messages);
