@@ -63,6 +63,10 @@ abstract class BaseValidator
      * @var boolean
      */
     protected $strict = false;
+    /**
+     * @var array
+     */
+    protected $parsedRules;
 
     /**
      * Set mode to insert
@@ -149,10 +153,10 @@ abstract class BaseValidator
         if ($this->mode) $this->{$this->mode}();
 
         //check if I only validate necessary attributes
-        $_rules = !$this->strict ? array_intersect_key($this->rules, $this->data) : $this->rules;
+        $this->parsedRules = !$this->strict ? array_intersect_key($this->rules, $this->data) : $this->rules;
 
         $this->runner->setData($this->data);
-        $this->runner->addRules($_rules);
+        $this->runner->addRules($this->parsedRules);
         $this->runner->setCustomMessages($this->messages);
 
         //determine if any errors occured
@@ -307,6 +311,15 @@ abstract class BaseValidator
     public function getRules()
     {
         return $this->rules;
+    }
+
+    /**
+     * Get the parsed rules
+     * @return array
+     */
+    public function getParsedRules()
+    {
+        return $this->parsedRules;
     }
 
     /**
