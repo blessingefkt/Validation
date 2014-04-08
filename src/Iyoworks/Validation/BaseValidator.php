@@ -1,4 +1,6 @@
 <?php namespace Iyoworks\Validation;
+use Illuminate\Support\Contracts\ArrayableInterface;
+use Illuminate\Support\Contracts\JsonableInterface;
 
 /**
  * Class BaseValidator
@@ -26,6 +28,18 @@ abstract class BaseValidator
      * @var \Iyoworks\Validation\Validator
      */
     protected $runner;
+    /**
+     * @var Object
+     */
+    protected $object;
+    /**
+     * @var bool
+     */
+    protected $isValid;
+    /**
+     * @var callable
+     */
+    protected $errorCallback;
     /**
      * @var \Illuminate\Support\MessageBag
      */
@@ -75,8 +89,7 @@ abstract class BaseValidator
      */
     public function validForInsert($data)
     {
-        $this->mode = static::MODE_INSERT;
-        return $this->isValid($data, $this->insertRules);
+        return $this->isValid($data, $this->insertRules, static::MODE_INSERT);
     }
 
     /**
@@ -86,8 +99,7 @@ abstract class BaseValidator
      */
     public function validForUpdate($data)
     {
-        $this->mode = static::MODE_UPDATE;
-        return $this->isValid($data, $this->updateRules);
+        return $this->isValid($data, $this->updateRules,  static::MODE_UPDATE);
     }
 
     /**
@@ -97,8 +109,7 @@ abstract class BaseValidator
      */
     public function validForDelete($data)
     {
-        $this->mode = static::MODE_DELETE;
-        return $this->isValid($data, $this->deleteRules);
+        return $this->isValid($data, $this->deleteRules, static::MODE_DELETE);
     }
 
     /**
@@ -133,19 +144,26 @@ abstract class BaseValidator
     {
     }
 
+    protected function prePrune()
+    {
+    }
+
     /**
      * Run the validator
-     * @param  mixed $data
+     * @param mixed $data
+     * @param array $rules
+     * @param string $mode
      * @return bool
      */
-    public function isValid($data, array $rules = [])
+    public function isValid($data, array $rules = [], $mode = null)
     {
-        $this->data = $data;
+        $this->setData($data);
 
         //check if I only validate necessary attributes
-        $_rules = !$this->strict ? array_intersect_key($this->rules, $this->data) : $this->rules;
+        list($_rules, $_data) = $this->prune();
+
         $_rules = $this->parseRuleReplacements($_rules);
-        $this->runner = static::$factory->make($this->data, $_rules, $this->messages);
+        $this->runner = static::$factory->make($_data, $_rules, $this->messages);
 
         // add additional rules to validator
         $this->runner->addRules($this->parseRuleReplacements($rules));
@@ -155,15 +173,35 @@ abstract class BaseValidator
 
         $this->preValidate();
         //if a mode has been set, call the corresponding function
-        if ($this->mode) $this->{$this->mode}();
+        if ($mode) {
+            $this->mode = $mode;
+            $this->{$mode}();
+        }
 
         //determine if any errors occurred
-        if (!$this->runner->passes()) {
-            $this->handleErrors($this->runner->messages());
-            return false;
+        if ($this->isValid = $this->runner->passes())
+        {
+            $this->handleErrors(null);
         }
-        $this->handleErrors(null);
-        return true;
+        else
+        {
+            $this->handleErrors($this->runner->messages());
+        }
+        return $this->isValid;
+    }
+
+    /**
+     * @return array
+     */
+    protected function prune()
+    {
+        $this->prePrune();
+        $data = array_dot($this->data);
+        if ($this->strict)
+            $rules = $this->rules;
+        else
+            $rules = array_intersect_key($this->rules, $data);
+        return [ $rules, $data ];
     }
 
     /**
@@ -172,6 +210,8 @@ abstract class BaseValidator
     protected function handleErrors($bag)
     {
         if ($bag) {
+            if (!$this->isValid && $this->errorCallback)
+                    call_user_func($this->errorCallback, $bag, $this);
             if (!$this->errors)
                 $this->errors = $bag;
             else
@@ -192,6 +232,26 @@ abstract class BaseValidator
             $_rules[$key] = $rule;
         }
         return $_rules;
+    }
+
+    /**
+     * @param $name
+     * @param bool $append
+     * @return \Illuminate\Support\MessageBag
+     */
+    public function mapErrors($name, $append = false)
+    {
+        $toMerge = [];
+        foreach ($this->errors()->getMessages() as $key => $errors) {
+            $toMerge["{$name}.{$key}"] = array_map(function($msg) use ($name, $key, $append)
+            {
+                $replace = ($append) ?  $key .' '.$name : $name .' '.$key;
+                return str_replace($key, $replace, $msg);
+            }, $errors);
+        }
+
+        $this->errors = $this->newMsgBag($toMerge);
+        return $this->errors;
     }
 
     /**
@@ -228,9 +288,9 @@ abstract class BaseValidator
     /**
      * @return \Illuminate\Support\MessageBag
      */
-    protected function newMsgBag()
+    protected function newMsgBag($msgs = [])
     {
-        return new \Illuminate\Support\MessageBag;
+        return new \Illuminate\Support\MessageBag($msgs);
     }
 
     /**
@@ -282,6 +342,15 @@ abstract class BaseValidator
     {
         array_set($this->data, $key, $value);
         return $this;
+    }
+
+    /**
+     * @param $key
+     * @return bool
+     */
+    public function has($key)
+    {
+        return (bool) array_get($this->data, $key, false);
     }
 
     /**
@@ -343,4 +412,45 @@ abstract class BaseValidator
             $this->data = array_merge_recursive($this->data, (array)$data);
         return $this;
     }
+
+    /**
+     * @param array $rules
+     * @return $this
+     */
+    public function addRules(array $rules)
+    {
+        $this->rules = array_merge($this->rules, $rules);
+        return $this;
+    }
+
+    /**
+     * @param $data
+     * @return $this
+     */
+    public function setData($data)
+    {
+        $this->object = $data;
+        $this->data = $this->castToArray($data);
+        return $this;
+    }
+
+    protected function castToArray($data)
+    {
+        if ($data instanceof ArrayableInterface)
+            return $data->toArray();
+        if ($data instanceof JsonableInterface)
+            return json_decode($data->toJson(), 1);
+        return (array) $data;
+    }
+
+    /**
+     * @param $callable
+     * @return $this
+     */
+    public function errorCallback($callable)
+    {
+        $this->errorCallback = $callable;
+        return $this;
+    }
+
 }
