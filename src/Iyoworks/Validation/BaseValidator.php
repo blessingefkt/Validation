@@ -219,6 +219,10 @@ abstract class BaseValidator
         }
     }
 
+    /**
+     * @param $_rules
+     * @return mixed
+     */
     protected function parseRuleReplacements($_rules)
     {
         foreach ($_rules as $key => $rule) {
@@ -434,6 +438,10 @@ abstract class BaseValidator
         return $this;
     }
 
+    /**
+     * @param $data
+     * @return array|mixed
+     */
     protected function castToArray($data)
     {
         if ($data instanceof ArrayableInterface)
