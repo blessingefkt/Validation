@@ -230,7 +230,7 @@ abstract class BaseValidator
             if (preg_match_all("/\[(\w+)\]/", $rule,  $matches, PREG_SET_ORDER))
             {
                 foreach ($matches as $match) {
-                    $rule = str_replace($match[0], $this->get($match[1]), $rule);
+                    $rule = str_replace($match[0], $this->get($match[1], 'NULL'), $rule);
                 }
             }
             $_rules[$key] = $rule;
