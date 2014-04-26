@@ -177,7 +177,6 @@ abstract class BaseValidator
             $this->mode = $mode;
             $this->{$mode}();
         }
-
         //determine if any errors occurred
         if ($this->isValid = $this->runner->passes())
         {
@@ -196,7 +195,7 @@ abstract class BaseValidator
     protected function prune()
     {
         $this->prePrune();
-        $data = array_dot($this->data);
+        $data = $this->data;
         if ($this->strict)
             $rules = $this->rules;
         else
