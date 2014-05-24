@@ -1,4 +1,5 @@
 <?php namespace Iyoworks\Validation;
+
 use Illuminate\Support\Contracts\ArrayableInterface;
 use Illuminate\Support\Contracts\JsonableInterface;
 
@@ -51,19 +52,11 @@ abstract class BaseValidator
     /**
      * @var array
      */
-    protected $rules = [];
-    /**
-     * @var array
-     */
-    protected $updateRules = [];
-    /**
-     * @var array
-     */
-    protected $insertRules = [];
-    /**
-     * @var array
-     */
-    protected $deleteRules = [];
+    protected $rules = [],
+        $workingRules = [],
+        $updateRules = [],
+        $insertRules = [],
+        $deleteRules = [];
     /**
      * @var array
      */
@@ -99,7 +92,7 @@ abstract class BaseValidator
      */
     public function validForUpdate($data)
     {
-        return $this->isValid($data, $this->updateRules,  static::MODE_UPDATE);
+        return $this->isValid($data, $this->updateRules, static::MODE_UPDATE);
     }
 
     /**
@@ -158,18 +151,13 @@ abstract class BaseValidator
     public function isValid($data, array $rules = [], $mode = null)
     {
         $this->setData($data);
-
+        $this->workingRules = [];
         //check if I only validate necessary attributes
         list($_rules, $_data) = $this->prune();
 
-        $_rules = $this->parseRuleReplacements($_rules);
+        $this->workingRules = $this->parseRuleReplacements(array_replace_recursive($_rules, $rules));
+
         $this->runner = static::$factory->make($_data, $_rules, $this->messages);
-
-        // add additional rules to validator
-        $this->runner->addRules($this->parseRuleReplacements($rules));
-
-        // make parsed rules available
-        $this->parsedRules = $this->runner->getRules();
 
         $this->preValidate();
         //if a mode has been set, call the corresponding function
@@ -177,13 +165,17 @@ abstract class BaseValidator
             $this->mode = $mode;
             $this->{$mode}();
         }
+
+        // add additional rules to validator
+        $this->runner->addRules($this->workingRules);
+
+        // make parsed rules available
+        $this->parsedRules = $this->runner->getRules();
+
         //determine if any errors occurred
-        if ($this->isValid = $this->runner->passes())
-        {
+        if ($this->isValid = $this->runner->passes()) {
             $this->handleErrors(null);
-        }
-        else
-        {
+        } else {
             $this->handleErrors($this->runner->messages());
         }
         return $this->isValid;
@@ -200,7 +192,7 @@ abstract class BaseValidator
             $rules = $this->rules;
         else
             $rules = array_intersect_key($this->rules, $data);
-        return [ $rules, $data ];
+        return [$rules, $data];
     }
 
     /**
@@ -209,12 +201,9 @@ abstract class BaseValidator
     protected function handleErrors($bag)
     {
         if ($bag) {
+            $this->errors = $bag;
             if (!$this->isValid && $this->errorCallback)
-                    call_user_func($this->errorCallback, $bag, $this);
-            if (!$this->errors)
-                $this->errors = $bag;
-            else
-                $this->errors->merge($bag->getMessages());
+                call_user_func($this->errorCallback, $this->errors, $this);
         }
     }
 
@@ -226,8 +215,7 @@ abstract class BaseValidator
     {
         foreach ($_rules as $key => $rule) {
             $matches = [];
-            if (preg_match_all("/\[(\w+)\]/", $rule,  $matches, PREG_SET_ORDER))
-            {
+            if (preg_match_all("/\[(\w+)\]/", $rule, $matches, PREG_SET_ORDER)) {
                 foreach ($matches as $match) {
                     $rule = str_replace($match[0], $this->get($match[1], 'NULL'), $rule);
                 }
@@ -246,9 +234,8 @@ abstract class BaseValidator
     {
         $toMerge = [];
         foreach ($this->errors()->getMessages() as $key => $errors) {
-            $toMerge["{$name}.{$key}"] = array_map(function($msg) use ($name, $key, $append)
-            {
-                $replace = ($append) ?  $key .' '.$name : $name .' '.$key;
+            $toMerge["{$name}.{$key}"] = array_map(function ($msg) use ($name, $key, $append) {
+                $replace = ($append) ? $key . ' ' . $name : $name . ' ' . $key;
                 return str_replace($key, $replace, $msg);
             }, $errors);
         }
@@ -353,7 +340,7 @@ abstract class BaseValidator
      */
     public function has($key)
     {
-        return (bool) array_get($this->data, $key, false);
+        return (bool)array_get($this->data, $key, false);
     }
 
     /**
@@ -447,7 +434,7 @@ abstract class BaseValidator
             return $data->toArray();
         if ($data instanceof JsonableInterface)
             return json_decode($data->toJson(), 1);
-        return (array) $data;
+        return (array)$data;
     }
 
     /**
