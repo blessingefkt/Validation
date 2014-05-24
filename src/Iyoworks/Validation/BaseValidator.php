@@ -53,7 +53,7 @@ abstract class BaseValidator
      * @var array
      */
     protected $rules = [],
-        $workingRules = [],
+        $ignoredRules = [],
         $updateRules = [],
         $insertRules = [],
         $deleteRules = [];
@@ -70,10 +70,6 @@ abstract class BaseValidator
      * @var boolean
      */
     protected $strict = false;
-    /**
-     * @var array
-     */
-    protected $parsedRules;
 
     /**
      * Set mode to insert
@@ -137,10 +133,6 @@ abstract class BaseValidator
     {
     }
 
-    protected function prePrune()
-    {
-    }
-
     /**
      * Run the validator
      * @param mixed $data
@@ -151,13 +143,12 @@ abstract class BaseValidator
     public function isValid($data, array $rules = [], $mode = null)
     {
         $this->setData($data);
-        $this->workingRules = [];
         //check if I only validate necessary attributes
         list($_rules, $_data) = $this->prune();
 
-        $this->workingRules = $this->parseRuleReplacements(array_replace_recursive($_rules, $rules));
+        $this->runner = static::$factory->make($_data, $this->parseRuleReplacements($_rules));
 
-        $this->runner = static::$factory->make([], []);
+        $this->runner->addRules($this->parseRuleReplacements($rules));
 
         $this->preValidate();
         //if a mode has been set, call the corresponding function
@@ -166,12 +157,7 @@ abstract class BaseValidator
             $this->{$mode}();
         }
 
-        $this->runner->addRules($this->workingRules);
-        $this->runner->setData($this->data);
         $this->runner->setCustomMessages($this->messages);
-
-        // make parsed rules available
-        $this->parsedRules = $this->runner->getRules();
 
         //determine if any errors occurred
         if ($this->isValid = $this->runner->passes()) {
@@ -183,17 +169,26 @@ abstract class BaseValidator
     }
 
     /**
+ * @param dynamic $key...
+ */
+    public function ignore($key)
+    {
+        $this->ignoredRules = func_get_args();
+    }
+
+    /**
      * @return array
      */
     protected function prune()
     {
-        $this->prePrune();
-        $data = $this->data;
         if ($this->strict)
-            $rules = $this->rules;
+        {
+            return [$this->rules, $this->data];
+        }
         else
-            $rules = array_intersect_key($this->rules, $data);
-        return [$rules, $data];
+        {
+            return [array_intersect_key($this->rules, $this->data), $this->data];
+        }
     }
 
     /**
@@ -214,6 +209,10 @@ abstract class BaseValidator
      */
     protected function parseRuleReplacements($_rules)
     {
+        if ($this->ignoredRules)
+        {
+            $_rules = array_diff_key($_rules, array_flip($this->ignoredRules));
+        }
         foreach ($_rules as $key => $rule) {
             $matches = [];
             if (preg_match_all("/\[(\w+)\]/", $rule, $matches, PREG_SET_ORDER)) {
@@ -375,9 +374,9 @@ abstract class BaseValidator
      * Get the parsed rules
      * @return array
      */
-    public function getParsedRules()
+    public function getWorkingRules()
     {
-        return $this->parsedRules;
+        return $this->runner->getRules();
     }
 
     /**

@@ -63,4 +63,14 @@ class Validator extends LValidator
 		$this->rules = array_merge_recursive($this->rules, $rules);
 	}
 
+    /**
+     * remove rules from the validator
+     * @param string $key
+     */
+    public function forgetRule($key)
+    {
+        array_forget($this->rules, $key);
+    }
+
+
 }
