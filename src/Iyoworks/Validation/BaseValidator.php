@@ -157,7 +157,7 @@ abstract class BaseValidator
 
         $this->workingRules = $this->parseRuleReplacements(array_replace_recursive($_rules, $rules));
 
-        $this->runner = static::$factory->make($_data, $_rules, $this->messages);
+        $this->runner = static::$factory->make([], []);
 
         $this->preValidate();
         //if a mode has been set, call the corresponding function
@@ -166,8 +166,9 @@ abstract class BaseValidator
             $this->{$mode}();
         }
 
-        // add additional rules to validator
         $this->runner->addRules($this->workingRules);
+        $this->runner->setData($this->data);
+        $this->runner->setCustomMessages($this->messages);
 
         // make parsed rules available
         $this->parsedRules = $this->runner->getRules();
