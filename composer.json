@@ -17,8 +17,8 @@
     "phpunit/phpunit": "3.7.*"
   },
   "autoload": {
-    "psr-0": {
-      "Iyoworks": "src"
+    "psr-4": {
+      "Iyoworks\\Validation\\": "src"
     }
   },
   "extra": {
