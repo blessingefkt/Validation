@@ -1,7 +1,6 @@
 <?php namespace Iyoworks\Validation;
 use Closure, DB;
 use Illuminate\Validation\Validator as LValidator;
-use Illuminate\Support\MessageBag;
 
 class Validator extends LValidator
 {
@@ -15,7 +14,7 @@ class Validator extends LValidator
 	 * @param closure $dynamic  
 	 * @param string  $message  
 	 */
-	public function addDynamic($attribute, $rule, closure $dynamic, $message  = null)
+	public function addDynamic($attribute, $rule, Closure $dynamic, $message  = null)
 	{
 		$this->rules[$attribute][$rule] = "dynamic:$rule";
 		$this->dynamics[$attribute][$rule] = $dynamic;

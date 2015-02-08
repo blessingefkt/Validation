@@ -1,7 +1,7 @@
 {
   "name": "iyoworks/validation",
   "description": "Provides a base class to implement validation as a service. Also adds a little sugar to Laravel's validator",
-  "keywords" : [ "laravel", "laravel 4", "validation"],
+  "keywords" : [ "laravel", "laravel 5", "validation"],
   "authors": [
     {
       "name": "Blessing Osakue",
@@ -9,8 +9,8 @@
     }
   ],
   "require": {
-    "illuminate/support": "~4",
-    "illuminate/validation": "~4"
+    "illuminate/support": "~5",
+    "illuminate/validation": "~5"
   },
   "require-dev": {
     "mockery/mockery": "*",

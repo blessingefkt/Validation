@@ -1,7 +1,8 @@
 <?php namespace Iyoworks\Validation;
 
-use Illuminate\Support\Contracts\ArrayableInterface;
-use Illuminate\Support\Contracts\JsonableInterface;
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Contracts\Support\Jsonable;
+use Illuminate\Contracts\Support\MessageBag;
 
 /**
  * Class BaseValidator
@@ -42,7 +43,7 @@ abstract class BaseValidator
      */
     protected $errorCallback;
     /**
-     * @var \Illuminate\Support\MessageBag
+     * @var MessageBag
      */
     protected $errors;
     /**
@@ -134,15 +135,23 @@ abstract class BaseValidator
     }
 
     /**
+     * Called after validation is run but before an exception is thrown
+     */
+    protected function postValidate()
+    {
+    }
+
+    /**
      * Run the validator
      * @param mixed $data
      * @param array $rules
      * @param string $mode
      * @return bool
      */
-    public function isValid($data, array $rules = [], $mode = null)
+    public function isValid($data = null, array $rules = [], $mode = null)
     {
-        $this->setData($data);
+        if (!is_null($data)) $this->setData($data);
+
         //check if I only validate necessary attributes
         list($_rules, $_data) = $this->prune();
 
@@ -159,18 +168,36 @@ abstract class BaseValidator
 
         $this->runner->setCustomMessages($this->messages);
 
-        //determine if any errors occurred
-        if ($this->isValid = $this->runner->passes()) {
-            $this->handleErrors(null);
-        } else {
-            $this->handleErrors($this->runner->messages());
+        $this->isValid = $this->runner->passes();
+
+        $this->postValidate();
+
+        if (!$this->isValid) {
+            $this->errors = $this->runner->messages();
+
+            if (isset($this->errorCallback))
+                call_user_func($this->errorCallback, $this->errors);
+
+            switch ($this->mode) {
+                case self::MODE_INSERT:
+                    throw new InsertValidationException($this->errors);
+                    break;
+                case self::MODE_UPDATE:
+                    throw new UpdateValidationException($this->errors);
+                    break;
+                case self::MODE_DELETE:
+                    throw new DeleteValidationException($this->errors);
+                    break;
+                default:
+                    throw new ValidationException($this->errors);
+            }
         }
         return $this->isValid;
     }
 
     /**
- * @param dynamic $key...
- */
+     * @param dynamic $key ...
+     */
     public function ignore($key)
     {
         $this->ignoredRules = func_get_args();
@@ -181,25 +208,10 @@ abstract class BaseValidator
      */
     protected function prune()
     {
-        if ($this->strict)
-        {
+        if ($this->strict) {
             return [$this->rules, $this->data];
-        }
-        else
-        {
+        } else {
             return [array_intersect_key($this->rules, $this->data), $this->data];
-        }
-    }
-
-    /**
-     * @param \Illuminate\Support\MessageBag $bag
-     */
-    protected function handleErrors($bag)
-    {
-        if ($bag) {
-            $this->errors = $bag;
-            if (!$this->isValid && $this->errorCallback)
-                call_user_func($this->errorCallback, $this->errors, $this);
         }
     }
 
@@ -209,8 +221,7 @@ abstract class BaseValidator
      */
     protected function parseRuleReplacements($_rules)
     {
-        if ($this->ignoredRules)
-        {
+        if ($this->ignoredRules) {
             $_rules = array_diff_key($_rules, array_flip($this->ignoredRules));
         }
         foreach ($_rules as $key => $rule) {
@@ -226,25 +237,6 @@ abstract class BaseValidator
     }
 
     /**
-     * @param $name
-     * @param bool $append
-     * @return \Illuminate\Support\MessageBag
-     */
-    public function mapErrors($name, $append = false)
-    {
-        $toMerge = [];
-        foreach ($this->errors()->getMessages() as $key => $errors) {
-            $toMerge["{$name}.{$key}"] = array_map(function ($msg) use ($name, $key, $append) {
-                $replace = ($append) ? $key . ' ' . $name : $name . ' ' . $key;
-                return str_replace($key, $replace, $msg);
-            }, $errors);
-        }
-
-        $this->errors = $this->newMsgBag($toMerge);
-        return $this->errors;
-    }
-
-    /**
      * Get a value from data
      * @param  string $key
      * @param  mixed $default
@@ -253,15 +245,6 @@ abstract class BaseValidator
     public function get($key, $default = null)
     {
         return array_get($this->data, $key, $default);
-    }
-
-    /**
-     * Get the errors
-     * @return mixed
-     */
-    public function errorMsg()
-    {
-        return implode(' ', $this->errors()->all());
     }
 
     /**
@@ -276,7 +259,7 @@ abstract class BaseValidator
     }
 
     /**
-     * @return \Illuminate\Support\MessageBag
+     * @return \Illuminate\Contracts\Support\MessageBag
      */
     protected function newMsgBag($msgs = [])
     {
@@ -284,7 +267,7 @@ abstract class BaseValidator
     }
 
     /**
-     * Get a the data container
+     * Get the data container
      * @return array
      */
     public function getData()
@@ -313,7 +296,7 @@ abstract class BaseValidator
     }
 
     /**
-     * UnSet strict mode
+     * Unset strict mode
      * @return $this
      */
     public function relaxed()
@@ -430,9 +413,9 @@ abstract class BaseValidator
      */
     protected function castToArray($data)
     {
-        if ($data instanceof ArrayableInterface)
+        if ($data instanceof Arrayable)
             return $data->toArray();
-        if ($data instanceof JsonableInterface)
+        if ($data instanceof Jsonable)
             return json_decode($data->toJson(), 1);
         return (array)$data;
     }
@@ -446,5 +429,4 @@ abstract class BaseValidator
         $this->errorCallback = $callable;
         return $this;
     }
-
 }
